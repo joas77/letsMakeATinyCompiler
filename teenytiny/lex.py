@@ -1,4 +1,5 @@
 import enum
+import sys
 
 class Lexer:
     def __init__(self, input):
@@ -31,6 +32,7 @@ class Lexer:
         or keyword we will process the rest.
         '''
         token = None
+        self.skip_whitespace()
         if self.current_char == '+':
             token = Token(self.current_char, TokenType.PLUS)
         elif self.current_char == '-':
@@ -39,15 +41,36 @@ class Lexer:
             token = Token(self.current_char, TokenType.ASTERISK)
         elif self.current_char == '/':
             token = Token(self.current_char, TokenType.SLASH)
+        elif self.current_char == '=':
+            # check whether this token is = or ==
+            if self.peek() == '=':
+                last_char = self.current_char
+                self.next_char()
+                token = Token(last_char + self.current_char, TokenType.EQEQ)
+            else:
+                token = Token(self.current_char, TokenType.EQ)
         elif self.current_char =='\n':
             token = Token(self.current_char, TokenType.NEWLINE)
         elif self.current_char == '\0':
             token = Token(self.current_char, TokenType.EOF)
         else:
             # Unknown token!
-            pass
+            self.abort("Unknown token: " + self.current_char)
 
         self.next_char()
+        return token
+
+    def abort(self, message):
+        ''' Invalid token found, print error message and exit '''
+        sys.exit("Lexing error. " + message)
+
+    def skip_whitespace(self):
+        '''
+        skip whitespace except newlines,
+        which we will use to indicate the end of a stament.
+        '''
+        while self.current_char == ' ' or self.current_char == '\t' or self.current_char == '\r':
+            self.next_char()
 
 class Token:
     ''' Token contains the original text and the type of the token'''
@@ -62,25 +85,25 @@ class TokenType(enum.Enum):
     STRING = 2
     # keywords
     LABEL = 101
-    GOTO
-    PRINT
-    INPUT
-    LET
-    IF
-    THEN
-    ENDIF
-    WHILE
-    REPEAT
-    ENDWHILE
+    GOTO = 102
+    PRINT = 103
+    INPUT = 104
+    LET = 105
+    IF = 106
+    THEN = 107
+    ENDIF = 108
+    WHILE = 109
+    REPEAT = 110
+    ENDWHILE = 111
     # Operators
     EQ = 201
-    PLUS
-    MINUS
-    ASTERISK
-    SLASH
-    EQEQ
-    NOTEQ
-    LT
-    LTEQ
-    GT
-    GTEQ
+    PLUS = 202
+    MINUS = 203
+    ASTERISK = 204
+    SLASH = 205
+    EQEQ = 206
+    NOTEQ = 207
+    LT = 208
+    LTEQ = 209
+    GT = 210
+    GTEQ = 211
