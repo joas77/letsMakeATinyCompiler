@@ -2,10 +2,10 @@ import enum
 import sys
 
 class Lexer:
-    def __init__(self, input):
+    def __init__(self, input_source):
         # source code to lex as a string. Append a newline to
         # simplify lexing/parsing the last token/statement.
-        self.source = input + '\n'
+        self.source = input_source + '\n'
         self.current_char = ''
         self.current_pos = -1
         self.next_char()
@@ -31,8 +31,10 @@ class Lexer:
         If it's a multiple character operator (e.g., !=), number, identifier
         or keyword we will process the rest.
         '''
-        token = None
         self.skip_whitespace()
+        self.skip_comment()
+        token = None
+
         if self.current_char == '+':
             token = Token(self.current_char, TokenType.PLUS)
         elif self.current_char == '-':
@@ -43,12 +45,34 @@ class Lexer:
             token = Token(self.current_char, TokenType.SLASH)
         elif self.current_char == '=':
             # check whether this token is = or ==
+            token = self.get_doublechar_token('=', TokenType.EQEQ, TokenType.EQ)
+        elif self.current_char == '>':
+            # check whether this token is > or >=
+            token = self.get_doublechar_token('=', TokenType.GTEQ, TokenType.GT)
+        elif self.current_char == '<':
+            # check whether this token is < or <=
+            token = self.get_doublechar_token('=', TokenType.LTEQ, TokenType.LT)
+        elif self.current_char == '!':
             if self.peek() == '=':
                 last_char = self.current_char
                 self.next_char()
-                token = Token(last_char + self.current_char, TokenType.EQEQ)
+                token = Token(last_char + self.current_char, TokenType.NOTEQ)
             else:
-                token = Token(self.current_char, TokenType.EQ)
+                self.abort("Expected !=, got !" + self.peek())
+        elif self.current_char == '"':
+            # Get characteres between quotations.
+            self.next_char()
+            start_pos = self.current_pos
+            while self.current_char != '"':
+                # Don't allow special characters in the string.
+                # We will be using C's printf on this string.
+                if self.current_char == '\r' or self.current_char == '\n' or\
+                    self.current_char == '\t' or self.current_char == '\\' or self.current_char == '%':
+                    self.abort('Illegal character in string.')
+                self.next_char()
+
+            token_text = self.source[start_pos: self.current_pos] # Get substring.
+            token = Token(token_text, TokenType.STRING)
         elif self.current_char =='\n':
             token = Token(self.current_char, TokenType.NEWLINE)
         elif self.current_char == '\0':
@@ -59,6 +83,17 @@ class Lexer:
 
         self.next_char()
         return token
+
+    def get_doublechar_token(self, second_char, double_char_token, single_char_token):
+        ''' method to parse double char tokens like ==, <=, etc '''
+        if self.peek() == second_char:
+            last_char = self.current_char
+            self.next_char()
+            token = Token(last_char + self.current_char, double_char_token)
+        else:
+            token = Token(self.current_char, single_char_token)
+        return token
+
 
     def abort(self, message):
         ''' Invalid token found, print error message and exit '''
@@ -72,17 +107,18 @@ class Lexer:
         while self.current_char == ' ' or self.current_char == '\t' or self.current_char == '\r':
             self.next_char()
 
-class Token:
-    ''' Token contains the original text and the type of the token'''
-    def __init__(self, token_text, token_kind):
-        self.text = token_text
-        self.kind = token_kind
+    def skip_comment(self):
+        ''' Skip comments in the code '''
+        if self.current_char == '#':
+            while self.current_char != '\n':
+                self.next_char()
 
 class TokenType(enum.Enum):
+    '''Token definitions'''
     EOF = -1
     NEWLINE = 0
     IDENT = 2
-    STRING = 2
+    STRING = 3
     # keywords
     LABEL = 101
     GOTO = 102
@@ -107,3 +143,9 @@ class TokenType(enum.Enum):
     LTEQ = 209
     GT = 210
     GTEQ = 211
+
+class Token:
+    ''' Token contains the original text and the type of the token'''
+    def __init__(self, token_text : str, token_kind: TokenType):
+        self.text = token_text
+        self.kind = token_kind
