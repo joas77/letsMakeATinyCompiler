@@ -73,16 +73,52 @@ class Lexer:
 
             token_text = self.source[start_pos: self.current_pos] # Get substring.
             token = Token(token_text, TokenType.STRING)
+        elif self.current_char.isdigit():
+            # Leading char is a digit, so this must be a numebr.
+            # Get all consecutive digits and decimal id there is one.
+            start_pos = self.current_pos
+            self.pick_digits()
+            if self.peek() == '.': # Decimal!
+                self.next_char()
+
+                # Must have at leat one digit after decimal.
+                if not self.peek().isdigit():
+                    # Error!
+                    self.abort('Illegak character in number.')
+                self.pick_digits()
+
+            token_text = self.source[start_pos: self.current_pos + 1] # Get the substring.
+            token = Token(token_text, TokenType.NUMBER)
+
         elif self.current_char =='\n':
             token = Token(self.current_char, TokenType.NEWLINE)
         elif self.current_char == '\0':
             token = Token(self.current_char, TokenType.EOF)
+        elif self.current_char.isalpha():
+            # Leading character is a letter, so this must be and identifier or a keyword.
+            # Get all consecutive alpha numeric chatacters.
+            start_pos = self.current_pos
+            while self.peek().isalnum():
+                self.next_char()
+
+            # Check if the token is in the list of keywords.
+            token_text = self.source[start_pos: self.current_pos + 1]
+            keyword = Token.check_if_keyword(token_text)
+            if keyword is None: # Identifier
+                token = Token(token_text, TokenType.IDENT)
+            else: # keyword
+                token = Token(token_text, keyword)
         else:
             # Unknown token!
             self.abort("Unknown token: " + self.current_char)
 
         self.next_char()
         return token
+
+    def pick_digits(self):
+        ''' Pick all consecutive digits '''
+        while self.peek().isdigit():
+            self.next_char()
 
     def get_doublechar_token(self, second_char, double_char_token, single_char_token):
         ''' method to parse double char tokens like ==, <=, etc '''
@@ -117,6 +153,7 @@ class TokenType(enum.Enum):
     '''Token definitions'''
     EOF = -1
     NEWLINE = 0
+    NUMBER = 1
     IDENT = 2
     STRING = 3
     # keywords
@@ -149,3 +186,11 @@ class Token:
     def __init__(self, token_text : str, token_kind: TokenType):
         self.text = token_text
         self.kind = token_kind
+
+    @staticmethod
+    def check_if_keyword(token_text):
+        for kind in TokenType:
+            # Relies on all keywords enum values being 1XX.
+            if kind.name == token_text and kind.value >= 100 and kind.value < 200:
+                return kind
+        return None
