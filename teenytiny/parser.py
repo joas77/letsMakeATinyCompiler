@@ -50,6 +50,8 @@ class Parser:
     def statement(self):
         '''
         statement ::= "PRINT" (expression | string) nl
+                    | "IF"  comparision "THEN" nl {statement} "ENDIF" nl
+                    | "WHILE" comparision "REPEAT" nl {statement} "ENDWHILE nl
         Check the first token to see what kind of statement this is.
         '''
 
@@ -64,6 +66,32 @@ class Parser:
             else:
                 # Expect an expression
                 self.expression()
+        elif self.check_token(TokenType.IF):
+            print('STATEMENT-IF')
+            self.next_token()
+            self.comparision()
+
+            self.match(TokenType.THEN)
+            self.nl()
+
+            # zero or more statements in the body.
+            while not self.check_token(TokenType.ENDIF):
+                self.statement()
+
+            self.match(TokenType.ENDIF)
+        elif self.check_token(TokenType.WHILE):
+            print('STATEMENT-WHILE')
+            self.next_token()
+            self.comparision()
+
+            self.match(TokenType.REPEAT)
+            self.nl()
+
+            # zero or more statements in the loop body
+            while not self.check_token(TokenType.ENDWHILE):
+                self.statement()
+
+            self.match(TokenType.ENDWHILE)
 
         # Newline
         self.nl()
@@ -79,4 +107,7 @@ class Parser:
             self.next_token()
 
     def expression(self):
+        pass
+
+    def comparision(self):
         pass
