@@ -42,6 +42,11 @@ class Parser:
         '''program ::= {statement}'''
         print('PROGRAM')
 
+        # Since some newlines are requiered in our grammar,
+        # need to skip the excess.
+        while self.check_token(TokenType.NEWLINE):
+            self.next_token()
+
         # Parse all the statements in the program.
         while not self.check_token(TokenType.EOF):
             self.statement()
@@ -52,6 +57,9 @@ class Parser:
         statement ::= "PRINT" (expression | string) nl
                     | "IF"  comparision "THEN" nl {statement} "ENDIF" nl
                     | "WHILE" comparision "REPEAT" nl {statement} "ENDWHILE nl
+                    | "LABEL" ident nl
+                    | "GOTO" ident "=" expression nl
+                    | "INPUT" ident nl
         Check the first token to see what kind of statement this is.
         '''
 
@@ -92,6 +100,36 @@ class Parser:
                 self.statement()
 
             self.match(TokenType.ENDWHILE)
+
+        # "LABEL" ident
+        elif self.check_token(TokenType.LABEL):
+            print('STATEMENT-LABEL')
+            self.next_token()
+            self.match(TokenType.IDENT)
+
+        # "GOTO" ident
+        elif self.check_token(TokenType.GOTO):
+            print('STATEMENT-GOTO')
+            self.next_token()
+            self.match(TokenType.IDENT)
+
+        # "LET" ident "=" expression
+        elif self.check_token(TokenType.GOTO):
+            print('STATEMENT-LET')
+            self.next_token()
+            self.match(TokenType.IDENT)
+            self.match(TokenType.EQ)
+            self.expression()
+
+        # "INPUT" ident
+        elif self.check_token(TokenType.INPUT):
+            print('STATEMENT-INPUT')
+            self.next_token()
+            self.match(TokenType.IDENT)
+
+        # This is not a valid statement. Error!
+        else:
+            self.abort(f'Invalid statement at {self.current_token.text} ({self.current_token.kind.name})')
 
         # Newline
         self.nl()
